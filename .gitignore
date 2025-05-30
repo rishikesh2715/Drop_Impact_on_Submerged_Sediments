@@ -1,0 +1,9 @@
+
+# venv files
+venv/
+
+# video files
+*.avi
+
+# video data folder
+video_data/
