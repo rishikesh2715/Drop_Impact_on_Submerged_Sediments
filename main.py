@@ -1,9 +1,14 @@
 import cv2
 import numpy as np
 import pandas as pd
+from tkinter import filedialog, Tk
 
 # --- Config ---
-VIDEO_PATH = 'D:/Documents/Drop_Impact_on_Submerged_Sediments/video_data/L1-34.2cm-H1-4.2cm-d50-600-um-Blue-nozzle.avi'
+root = Tk()
+root.withdraw()
+VIDEO_PATH = filedialog.askopenfilename(filetypes=[("Video files", "*.avi")])
+print(VIDEO_PATH)
+# VIDEO_PATH = 'D:/Documents/Drop_Impact_on_Submerged_Sediments/video_data/L1-34.2cm-H1-4.2cm-d50-600-um-Blue-nozzle.avi'
 SHOW_LIVE = True
 
 MANUAL_SEDIMENT_ANALYSIS_START_FRAME = 198
@@ -30,7 +35,17 @@ delay = int(1000 / fps) if fps > 0 else 1
 total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
 interface_y = None
-sediment_interface_y = int(frame_height * 0.635)
+# air_water_interface_y = int(frame_height * 0.15)
+# sediment_interface_y = int(frame_height * 0.7)
+
+# if video path contains "Regime_II" then change the interface y to 0.15
+if "Regime_II" in VIDEO_PATH:
+    air_water_interface_y = int(frame_height * 0.5)
+    sediment_interface_y = int(frame_height * 0.63)
+else:
+    air_water_interface_y = int(frame_height * 0.18)
+    sediment_interface_y = int(frame_height * 0.65)
+
 tracking_active = True
 cavity_active = False
 cavity_contact_frame = None
@@ -42,13 +57,72 @@ prev_cavity_stats = None
 trajectory = []
 sediment_analysis_active = False
 sediment_data_list = []
+SAVE_VIDEO = False
 
+# pause the video but keep the main process running
+paused = False
+stored_frame = None
+
+# --- KALMAN FILTER for smoothing the cavity metrics---
+class CavityKalman:
+    def __init__(self):
+        self.kf = cv2.KalmanFilter(8, 4)  # 8 states (x,y,d,w and their velocities), 4 measurements
+        dt = 1.0  # time step between frames (you can tune later)
+
+        # State: [x, y, d, w, vx, vy, vd, vw]
+        self.kf.transitionMatrix = np.array([
+            [1, 0, 0, 0, dt, 0,  0,  0],
+            [0, 1, 0, 0, 0,  dt, 0,  0],
+            [0, 0, 1, 0, 0,  0,  dt, 0],
+            [0, 0, 0, 1, 0,  0,  0,  dt],
+            [0, 0, 0, 0, 1,  0,  0,  0],
+            [0, 0, 0, 0, 0,  1,  0,  0],
+            [0, 0, 0, 0, 0,  0,  1,  0],
+            [0, 0, 0, 0, 0,  0,  0,  1]
+        ], dtype=np.float32)
+
+        self.kf.measurementMatrix = np.eye(4, 8, dtype=np.float32)  # observe x, y, d, w only
+        self.kf.processNoiseCov = np.eye(8, dtype=np.float32) * 1e-2
+        self.kf.measurementNoiseCov = np.eye(4, dtype=np.float32) * 1e-1
+        self.kf.errorCovPost = np.eye(8, dtype=np.float32)
+        self.initialized = False
+
+    def update(self, measurement):  # measurement = (x, y, depth, width)
+        if not self.initialized:
+            self.kf.statePost[:4, 0] = np.array(measurement, dtype=np.float32)
+            self.kf.statePost[4:, 0] = 0
+            self.initialized = True
+        else:
+            self.kf.correct(np.array(measurement, dtype=np.float32).reshape(4,1))
+
+    def predict(self):
+        pred = self.kf.predict()
+        x, y, d, w = pred[:4].flatten()
+        return int(x), int(y), float(d), float(w)
+
+# --- END KALMAN FILTER ---
+
+# Initialize the Kalman filter
+kalman_filter = CavityKalman()
+
+
+# --- DETECT CAVITY CONTOUR ---
 def detect_cavity_contour(gray_frame, interface_y_val, sediment_y_val,
-                          expected_center_x=None, prev_metrics=None, frame_bgr=None):
+                          expected_center_x=None, prev_metrics=None, frame_bgr=None,
+                          canny_thresh1=20, canny_thresh2=100,
+                          blur_ksize=9, min_ctr_w=12, min_ctr_h=8, y_cutoff_ratio=0.4):
+
     # ... (YOUR detect_cavity_contour function - UNCHANGED) ...
-    roi_top_offset = 28
+    if "Regime_II" in VIDEO_PATH:
+        roi_top_offset = 28
+    else:
+        roi_top_offset = 50
+
     roi_top_abs = interface_y_val + roi_top_offset
     roi_bottom_abs = min(interface_y_val + 250, sediment_y_val, frame_height -1)
+
+    # visulize this roi_top_abs and roi_bottom_abs
+    cv2.rectangle(frame_bgr, (0, roi_top_abs), (frame_bgr.shape[1], roi_bottom_abs), (0, 0, 255), 1)
 
     if roi_top_abs >= roi_bottom_abs:
         return None, np.zeros_like(gray_frame, dtype=np.uint8), None, frame_bgr
@@ -57,8 +131,11 @@ def detect_cavity_contour(gray_frame, interface_y_val, sediment_y_val,
     if roi_gray.size == 0 or roi_gray.shape[0] == 0 or roi_gray.shape[1] == 0 :
          return None, np.zeros_like(gray_frame, dtype=np.uint8), None, frame_bgr
 
-    blurred_roi = cv2.GaussianBlur(roi_gray, (9, 9), 2)
-    edges_roi = cv2.Canny(blurred_roi, threshold1=20, threshold2=100)
+    ksize = blur_ksize if blur_ksize % 2 == 1 else blur_ksize + 1  # ensure odd
+    blurred_roi = cv2.GaussianBlur(roi_gray, (ksize, ksize), 2)
+
+    edges_roi = cv2.Canny(blurred_roi, threshold1=canny_thresh1, threshold2=canny_thresh2)
+
 
     contours_roi, _ = cv2.findContours(edges_roi.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     
@@ -70,12 +147,12 @@ def detect_cavity_contour(gray_frame, interface_y_val, sediment_y_val,
     for c_roi in contours_roi:
         x_r, y_r, w_r, h_r = cv2.boundingRect(c_roi)
 
-        if h_r < 8 or w_r < 12:
+        if h_r < min_ctr_h or w_r < min_ctr_w:
             continue
-        
-        if y_r > roi_gray.shape[0] * 0.4 and y_r > 5:
-             continue
-        
+
+        if y_r > roi_gray.shape[0] * y_cutoff_ratio and y_r > 5:
+            continue
+    
         candidate_contours.append(c_roi)
 
     if not candidate_contours:
@@ -117,7 +194,7 @@ def detect_cavity_contour(gray_frame, interface_y_val, sediment_y_val,
     contour_ff = best_contour_roi.copy()
     contour_ff[:, 0, 1] += roi_top_abs
 
-    closing_line_y_abs = interface_y_val + 25
+    closing_line_y_abs = roi_top_abs
 
     ys_ff = contour_ff[:, 0, 1]
     xs_ff = contour_ff[:, 0, 0]
@@ -164,6 +241,16 @@ def detect_cavity_contour(gray_frame, interface_y_val, sediment_y_val,
         'apex': (int(apex_x_abs), int(apex_y_abs))
     }
 
+    # # --- OPTIONAL DEPTH SMOOTHING FILTER ---
+    # max_depth_delta = 30  # or 25; tune this
+    # if prev_metrics and 'depth' in prev_metrics:
+    #     prev_depth = prev_metrics['depth']
+    #     if abs(cavity_metrics_out['depth'] - prev_depth) > max_depth_delta:
+    #         print("[WARN] Depth jump too large; ignoring cavity this frame.")
+    #         return None, empty_mask, prev_metrics, frame_bgr
+    # # --- END FILTER ---
+
+
     if frame_bgr is not None:
         overlay = frame_bgr.copy()
         cavity_color_bgr = (148, 95, 234)
@@ -180,43 +267,64 @@ fourcc = cv2.VideoWriter_fourcc(*'FFV1')
 output_path = 'output_video_cavity_sediment_detection.avi'
 out = cv2.VideoWriter(output_path, fourcc, fps if fps > 0 else 30.0, (frame_width, frame_height))
 
-if SHOW_LIVE:
-    cv2.namedWindow('Sediment Binary Mask ROI', cv2.WINDOW_NORMAL)
-    # --- MODIFICATION: Add a window for the intermediate cavity mask for tuning ---
-    cv2.namedWindow('Intermediate Cavity Mask', cv2.WINDOW_NORMAL)
-    cv2.namedWindow('Intermediate Sediment+Cavity Mask', cv2.WINDOW_NORMAL)
+# if SHOW_LIVE:
+    # cv2.namedWindow('Sediment Binary Mask ROI', cv2.WINDOW_NORMAL)
+    # # --- MODIFICATION: Add a window for the intermediate cavity mask for tuning ---
+    # cv2.namedWindow('Intermediate Cavity Mask', cv2.WINDOW_NORMAL)
+    # cv2.namedWindow('Intermediate Sediment+Cavity Mask', cv2.WINDOW_NORMAL)
     # --- END MODIFICATION ---
+
+if SHOW_LIVE:
+    cv2.namedWindow('Cavity Tuning')
+    cv2.createTrackbar('Canny Thresh1', 'Cavity Tuning', 25, 255, lambda x: None)
+    cv2.createTrackbar('Canny Thresh2', 'Cavity Tuning', 90, 255, lambda x: None)
+    cv2.createTrackbar('Blur KSize', 'Cavity Tuning', 9, 31, lambda x: None)
+    cv2.createTrackbar('Min Ctr W', 'Cavity Tuning', 12, 100, lambda x: None)
+    cv2.createTrackbar('Min Ctr H', 'Cavity Tuning', 8, 100, lambda x: None)
+    cv2.createTrackbar('Y Cutoff %', 'Cavity Tuning', 40, 100, lambda x: None)  # e.g., 40 = 40% down
+
+    
 
 
 while cap.isOpened():
-    ret, frame = cap.read()
-    if not ret:
-        break
+    if not paused:
+        ret, frame = cap.read()
+        if not ret:
+            break
+        stored_frame = frame.copy()
+    else:
+        if stored_frame is None: continue
+        frame = stored_frame.copy()
 
     frame_idx = int(cap.get(cv2.CAP_PROP_POS_FRAMES))
     timestamp = cap.get(cv2.CAP_PROP_POS_MSEC) / 1000.0
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     blurred_full_frame = cv2.GaussianBlur(gray, (9, 9), 2)
 
-    # === Step 1: Detect horizontal air–water interface ===
-    if interface_y is None:
-        roi = blurred_full_frame[int(frame_height * 0.08):, :]
-        edges = cv2.Canny(roi, 50, 150, apertureSize=3)
-        lines = cv2.HoughLinesP(edges, 1, np.pi / 180, threshold=100, minLineLength=100, maxLineGap=10)
-        horizontal_lines = []
-        if lines is not None:
-            for line in lines:
-                x1, y1, x2, y2 = line[0]
-                angle = np.abs(np.arctan2(y2 - y1, x2 - x1) * 180 / np.pi)
-                if angle < 5:
-                    horizontal_lines.append((x1, y1, x2, y2))
-            if horizontal_lines:
-                y_vals = [y1 for (_, y1, _, y2) in horizontal_lines] + [y2 for (_, y1, _, y2) in horizontal_lines]
-                interface_y = int(np.median(y_vals))
+    # # === Step 1: Detect horizontal air–water interface ===
+    # if interface_y is None:
+    #     roi = blurred_full_frame[int(frame_height * 0.08):, :]
+    #     edges = cv2.Canny(roi, 50, 150, apertureSize=3)
+    #     lines = cv2.HoughLinesP(edges, 1, np.pi / 180, threshold=100, minLineLength=100, maxLineGap=10)
+    #     horizontal_lines = []
+    #     if lines is not None:
+    #         for line in lines:
+    #             x1, y1, x2, y2 = line[0]
+    #             angle = np.abs(np.arctan2(y2 - y1, x2 - x1) * 180 / np.pi)
+    #             if angle < 5:
+    #                 horizontal_lines.append((x1, y1, x2, y2))
+    #         if horizontal_lines:
+    #             y_vals = [y1 for (_, y1, _, y2) in horizontal_lines] + [y2 for (_, y1, _, y2) in horizontal_lines]
+    #             interface_y = int(np.median(y_vals))
     
-    if interface_y is not None:
-        cv2.line(frame, (0, interface_y), (frame.shape[1], interface_y), (148, 95, 234), 2)
-        cv2.putText(frame, "Air-Water", (10, interface_y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (148, 95, 234), 1, cv2.LINE_AA)
+    # if interface_y is not None:
+    #     cv2.line(frame, (0, interface_y), (frame.shape[1], interface_y), (148, 95, 234), 2)
+    #     cv2.putText(frame, "Air-Water", (10, interface_y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (148, 95, 234), 1, cv2.LINE_AA)
+
+    # put air - water interface line manually
+    interface_y = air_water_interface_y
+    cv2.line(frame, (0, interface_y), (frame.shape[1], interface_y), (148, 95, 234), 2)
+    cv2.putText(frame, "Air-Water", (10, interface_y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (148, 95, 234), 1, cv2.LINE_AA)
 
     cv2.line(frame, (0, sediment_interface_y), (frame.shape[1], sediment_interface_y), (255, 0, 0), 2)
     cv2.putText(frame, "Water-Sediment", (10, sediment_interface_y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 0), 1, cv2.LINE_AA)
@@ -245,17 +353,38 @@ while cap.isOpened():
                         # if velocity is not None: cv2.putText(frame, f"Vel: {velocity:.1f} px/s", (10, 95), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 255), 2, cv2.LINE_AA)
                     trajectory.append({'timestamp': timestamp, 'x': x, 'y': y, 'radius':r, 'velocity': velocity})
                     current_time_for_prev = timestamp; prev_position = (x, y); prev_time = current_time_for_prev
-                    if interface_y is not None and y >= (interface_y - r//2) :
-                        tracking_active = False; impact_frame = frame_idx; impact_x_coord = x
-                        prev_cavity_stats = None; cavity_active = True
+
+                    if interface_y is not None and (y + r) >= interface_y:
+                        tracking_active = False
+                        impact_frame = frame_idx
+                        impact_x_coord = x
+                        prev_cavity_stats = None
+                        cavity_active = True
+
+                        # Show contact label
+                        cv2.putText(frame, "CONTACT", (x + 10, y + r + 10),
+                                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 165, 255), 2, cv2.LINE_AA)
+
 
     # === Step 3: Cavity detection post-impact (YOUR ORIGINAL LOGIC) ===
     if cavity_active and impact_frame is not None and interface_y is not None and frame_idx > impact_frame:
         current_expected_cavity_x = impact_x_coord if impact_x_coord is not None else (prev_cavity_stats['apex'][0] if prev_cavity_stats and 'apex' in prev_cavity_stats else None)
+        
         cavity_contour_pts, _, cavity_metrics_data, frame_with_cavity = detect_cavity_contour(
             gray, interface_y, sediment_interface_y,
-            expected_center_x=current_expected_cavity_x, prev_metrics=prev_cavity_stats, frame_bgr=frame)
+            expected_center_x=current_expected_cavity_x, prev_metrics=prev_cavity_stats, frame_bgr=frame,
+            canny_thresh1=cv2.getTrackbarPos('Canny Thresh1', 'Cavity Tuning'),
+            canny_thresh2=cv2.getTrackbarPos('Canny Thresh2', 'Cavity Tuning'),
+            blur_ksize=cv2.getTrackbarPos('Blur KSize', 'Cavity Tuning'),
+            min_ctr_w=cv2.getTrackbarPos('Min Ctr W', 'Cavity Tuning'),
+            min_ctr_h=cv2.getTrackbarPos('Min Ctr H', 'Cavity Tuning'),
+            y_cutoff_ratio=cv2.getTrackbarPos('Y Cutoff %', 'Cavity Tuning') / 100.0
+        )
+
+        
         if frame_with_cavity is not None: frame = frame_with_cavity
+
+        # --- MODIFICATION: Use Kalman filter for smoother metrics ---
         if cavity_contour_pts is not None and cavity_metrics_data:
             prev_cavity_stats = cavity_metrics_data.copy()
             apex  = cavity_metrics_data['apex']; depth = cavity_metrics_data['depth']
@@ -368,18 +497,18 @@ while cap.isOpened():
                     cv2.putText(frame, f" Max H: {max_disturbance_height_pixels:.1f}px", (text_x_sed, text_y_sed_start + 30), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 165, 255), 1, cv2.LINE_AA)
                     cv2.rectangle(frame, (roi_sed_left, roi_sed_top), (roi_sed_right, roi_sed_bottom), (0,255,0), 1)
 
-    if SHOW_LIVE :
-        if sediment_analysis_active:
-            cv2.imshow('Sediment Binary Mask ROI', full_frame_sediment_binary_mask)
-            # --- MODIFICATION: Show intermediate masks ---
-            cv2.imshow('Intermediate Cavity Mask', full_frame_intermediate_cavity_mask)
-            cv2.imshow('Intermediate Sediment+Cavity Mask', full_frame_intermediate_sed_plus_cav_mask)
-            # --- END MODIFICATION ---
-        else: # Show empty masks if not active yet but windows are open
-            empty_canvas = np.zeros_like(gray, dtype=np.uint8)
-            cv2.imshow('Sediment Binary Mask ROI', empty_canvas)
-            cv2.imshow('Intermediate Cavity Mask', empty_canvas)
-            cv2.imshow('Intermediate Sediment+Cavity Mask', empty_canvas)
+    # if SHOW_LIVE :
+    #     if sediment_analysis_active:
+    #         cv2.imshow('Sediment Binary Mask ROI', full_frame_sediment_binary_mask)
+    #         # --- MODIFICATION: Show intermediate masks ---
+    #         cv2.imshow('Intermediate Cavity Mask', full_frame_intermediate_cavity_mask)
+    #         cv2.imshow('Intermediate Sediment+Cavity Mask', full_frame_intermediate_sed_plus_cav_mask)
+    #         # --- END MODIFICATION ---
+    #     else: # Show empty masks if not active yet but windows are open
+    #         empty_canvas = np.zeros_like(gray, dtype=np.uint8)
+    #         cv2.imshow('Sediment Binary Mask ROI', empty_canvas)
+    #         cv2.imshow('Intermediate Cavity Mask', empty_canvas)
+    #         cv2.imshow('Intermediate Sediment+Cavity Mask', empty_canvas)
 
 
     cv2.putText(frame, f"Time: {timestamp:.2f}s", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (153, 144, 28), 1, cv2.LINE_AA)
@@ -390,12 +519,14 @@ while cap.isOpened():
     #     cv2.rectangle(frame, (bar_x, bar_y), (bar_x + bar_width, bar_y + bar_height), (50, 50, 50), -1)
     #     cv2.rectangle(frame, (bar_x, bar_y), (bar_x + progress, bar_y + bar_height), (0, 255, 0), -1)
 
-    out.write(frame)
+    if SAVE_VIDEO:
+        out.write(frame)
+
     if SHOW_LIVE:
         cv2.imshow('Droplet and Sediment Analysis', frame)
         key = cv2.waitKey(delay if delay > 0 else 1) & 0xFF
         if key == ord('q'): break
-        elif key == ord('p'): cv2.waitKey(-1)
+        elif key == ord('p'): paused = not paused
 
 cap.release()
 out.release()

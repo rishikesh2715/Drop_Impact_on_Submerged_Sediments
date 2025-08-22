@@ -7,3 +7,7 @@ venv/
 
 # video data folder
 video_data/
+
+runs/
+
+videos/
