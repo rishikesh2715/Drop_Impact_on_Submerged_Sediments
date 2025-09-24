@@ -11,3 +11,25 @@ video_data/
 runs/
 
 videos/
+
+
+*.png
+
+*.jpg
+*.jpeg
+*.mp4
+*.avi
+*.mov
+*.mkv
+*.flv
+*.wmv
+*.webm
+*.gif
+*.bmp
+
+
+# dataset folder
+
+Cavity_Sediment_Segmentation/
+
+runs/
