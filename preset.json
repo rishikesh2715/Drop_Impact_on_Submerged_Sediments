@@ -1,0 +1,119 @@
+{
+  "D:\\Documents\\Drop_Impact_on_Submerged_Sediments\\videos\\092920-Blue-and-Yellow-Nozzle-with-Coarse-Glass-Beads-Regime I\\yellow-nozzle": {
+    "interface_y": 472,
+    "sediment_y": 544,
+    "conf": 0.65,
+    "delay_ms": 1,
+    "save_fps": null,
+    "start_paused": true,
+    "roi_safety": 0
+  },
+  "D:\\Documents\\Drop_Impact_on_Submerged_Sediments\\videos\\090320- Without GB experiements\\Yellow-nuzzle-without GB": {
+    "interface_y": 474,
+    "sediment_y": 760,
+    "conf": 0.25,
+    "delay_ms": 1,
+    "save_fps": null,
+    "start_paused": true,
+    "roi_safety": 0
+  },
+  "D:\\Documents\\Drop_Impact_on_Submerged_Sediments\\videos\\090320- Without GB experiements\\Purpule-nuzzle-without GB": {
+    "interface_y": 470,
+    "sediment_y": 758,
+    "conf": 0.25,
+    "delay_ms": 1,
+    "save_fps": null,
+    "start_paused": true,
+    "roi_safety": 0
+  },
+  "D:\\Documents\\Drop_Impact_on_Submerged_Sediments\\videos\\090320- Without GB experiements\\Blue-Nozzle-Largest-one- without GB": {
+    "interface_y": 472,
+    "sediment_y": 758,
+    "conf": 0.25,
+    "delay_ms": 1,
+    "save_fps": null,
+    "start_paused": true,
+    "roi_safety": 0
+  },
+  "D:\\Documents\\Drop_Impact_on_Submerged_Sediments\\videos\\Regime_II": {
+    "interface_y": 230,
+    "sediment_y": 550,
+    "conf": 0.25,
+    "delay_ms": 1,
+    "save_fps": null,
+    "start_paused": true,
+    "roi_safety": 0
+  },
+  "D:\\Documents\\Drop_Impact_on_Submerged_Sediments\\videos\\092920-Blue-and-Yellow-Nozzle-with-Coarse-Glass-Beads-Regime I": {
+    "interface_y": 470,
+    "sediment_y": 544,
+    "conf": 0.6,
+    "delay_ms": 1,
+    "save_fps": null,
+    "start_paused": true,
+    "roi_safety": 0
+  },
+  "D:\\Documents\\Drop_Impact_on_Submerged_Sediments\\videos\\100820- Fine Glass Beads-Regime I\\Large-blue-nozzle-with-contrast": {
+    "interface_y": 456,
+    "sediment_y": 500,
+    "conf": 0.5,
+    "delay_ms": 1,
+    "save_fps": null,
+    "start_paused": true,
+    "roi_safety": 0
+  },
+  "D:\\Documents\\Drop_Impact_on_Submerged_Sediments\\videos\\100820- Fine Glass Beads-Regime I\\Yello-nozzle": {
+    "interface_y": 454,
+    "sediment_y": 502,
+    "conf": 0.75,
+    "delay_ms": 1,
+    "save_fps": null,
+    "start_paused": true,
+    "roi_safety": 0
+  },
+  "D:\\Documents\\Drop_Impact_on_Submerged_Sediments\\videos\\100820- Fine Glass Beads-Regime I": {
+    "interface_y": 452,
+    "sediment_y": 504,
+    "conf": 0.75,
+    "delay_ms": 1,
+    "save_fps": null,
+    "start_paused": true,
+    "roi_safety": 0
+  },
+  "D:\\Documents\\Drop_Impact_on_Submerged_Sediments\\videos\\102220-Blue-Nozzle-with-fine-Glass-Beads- Regime I": {
+    "interface_y": 392,
+    "sediment_y": 484,
+    "conf": 0.25,
+    "delay_ms": 1,
+    "save_fps": null,
+    "start_paused": true,
+    "roi_safety": 0
+  },
+  "D:\\Documents\\Drop_Impact_on_Submerged_Sediments\\videos\\102420-Blue-Nozzle-with-Coarse-Glass-Beads- Regime I": {
+    "interface_y": 424,
+    "sediment_y": 504,
+    "conf": 0.25,
+    "delay_ms": 1,
+    "save_fps": null,
+    "start_paused": true,
+    "roi_safety": 0
+  },
+  "D:\\Documents\\Drop_Impact_on_Submerged_Sediments\\videos\\102520- Coarse GB- Regime I": {
+    "interface_y": 432,
+    "sediment_y": 482,
+    "conf": 0.25,
+    "delay_ms": 1,
+    "save_fps": null,
+    "start_paused": true,
+    "roi_safety": 0
+  },
+  "D:\\Documents\\Drop_Impact_on_Submerged_Sediments\\videos\\1025250(3)- Coarse GB- Regime I": {
+    "interface_y": 392,
+    "sediment_y": 462,
+    "conf": 0.25,
+    "delay_ms": 1,
+    "save_fps": null,
+    "start_paused": true,
+    "roi_safety": 0
+  }
+}
