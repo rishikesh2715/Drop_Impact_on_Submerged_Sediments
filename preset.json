@@ -115,5 +115,149 @@
     "save_fps": null,
     "start_paused": true,
     "roi_safety": 0
+  },
+  "F:\\Analyzed_Regime_II\\AA- 091520-Yellow-Nozzle-with-fine-Glass-Beads- regime II\\fine-glass-beads\\Need to be analyzed with GB": {
+    "interface_y": 210,
+    "sediment_y": 558,
+    "conf": 0.25,
+    "delay_ms": 1,
+    "save_fps": null,
+    "start_paused": true,
+    "roi_safety": 0
+  },
+  "F:\\Analyzed_Regime_II\\AA- 091520-Yellow-Nozzle-with-fine-Glass-Beads- regime II\\fine-glass-beads\\Need to be analyzed as without GB": {
+    "interface_y": 280,
+    "sediment_y": 552,
+    "conf": 0.25,
+    "delay_ms": 1,
+    "save_fps": null,
+    "start_paused": true,
+    "roi_safety": 0
+  },
+  "F:\\Analyzed_Regime_II\\AA- 062520--Blue-Nozzle-with-fine-Glass-Beads- Mixed both Regimes I & II\\Need to be analyzed as With GB": {
+    "interface_y": 270,
+    "sediment_y": 602,
+    "conf": 0.25,
+    "delay_ms": 1,
+    "save_fps": null,
+    "start_paused": true,
+    "roi_safety": 0
+  },
+  "F:\\Analyzed_Regime_II\\AA- 063020-Purple-Nozzle-with-fine-Glass-Beads- Regimes II\\Analyzed as Without GB": {
+    "interface_y": 446,
+    "sediment_y": 588,
+    "conf": 0.25,
+    "delay_ms": 1,
+    "save_fps": null,
+    "start_paused": true,
+    "roi_safety": 0
+  },
+  "F:\\Analyzed_Regime_II\\AA -072020-Blue-Nozzle-with-Coarse-Glass-Beads- Regime II- without black dye\\Analyzed as a Without GB": {
+    "interface_y": 194,
+    "sediment_y": 514,
+    "conf": 0.25,
+    "delay_ms": 1,
+    "save_fps": null,
+    "start_paused": true,
+    "roi_safety": 0
+  },
+  "F:\\Analyzed_Regime_II\\AA -072020-Blue-Nozzle-with-Coarse-Glass-Beads- Regime II- without black dye\\Analyzed as with GB": {
+    "interface_y": 250,
+    "sediment_y": 556,
+    "conf": 0.25,
+    "delay_ms": 1,
+    "save_fps": null,
+    "start_paused": true,
+    "roi_safety": 0
+  },
+  "F:\\Analyzed_Regime_II\\AA- 072120-Blue-Nozzle-with-Coarse-Glass-Beads- Regime II\\Need to be analyzed": {
+    "interface_y": 0,
+    "sediment_y": 600,
+    "conf": 0.25,
+    "delay_ms": 1,
+    "save_fps": null,
+    "start_paused": true,
+    "roi_safety": 0
+  },
+  "F:\\Analyzed_Regime_II\\AA- 091320-Yellow-Nozzle-with-Glass-Beads- Regime II\\fine-glass-beads\\Need to be analyzed as without GB": {
+    "interface_y": 272,
+    "sediment_y": 566,
+    "conf": 0.25,
+    "delay_ms": 1,
+    "save_fps": null,
+    "start_paused": true,
+    "roi_safety": 0
+  },
+  "F:\\Analyzed_Regime_II\\AA- 091320-Yellow-Nozzle-with-Glass-Beads- Regime II\\fine-glass-beads\\Need to be analyzed with GB": {
+    "interface_y": 212,
+    "sediment_y": 570,
+    "conf": 0.25,
+    "delay_ms": 1,
+    "save_fps": null,
+    "start_paused": true,
+    "roi_safety": 0
+  },
+  "F:\\Analyzed_Regime_II\\AA- 091320-Yellow-Nozzle-with-Glass-Beads- Regime II\\Need to be analyzed as without GB": {
+    "interface_y": 338,
+    "sediment_y": 564,
+    "conf": 0.25,
+    "delay_ms": 1,
+    "save_fps": null,
+    "start_paused": true,
+    "roi_safety": 0
+  },
+  "F:\\Analyzed_Regime_II\\AA- 091320-Yellow-Nozzle-with-Glass-Beads- Regime II\\Need to be analyzed with GB": {
+    "interface_y": 260,
+    "sediment_y": 558,
+    "conf": 0.25,
+    "delay_ms": 1,
+    "save_fps": null,
+    "start_paused": true,
+    "roi_safety": 0
+  },
+  "F:\\Analyzed_Regime_II\\AA- 091520-Yellow-Nozzle-with-fine-Glass-Beads- regime II\\Need to be analyzed": {
+    "interface_y": 520,
+    "sediment_y": 708,
+    "conf": 0.25,
+    "delay_ms": 1,
+    "save_fps": null,
+    "start_paused": true,
+    "roi_safety": 0
+  },
+  "F:\\Analyzed_Regime_II\\Need to be discussed with Rishikesh- 072920-H1=7.2cm-d50=600um-Blue(large)nozzle-DifferentL1- Regime II\\Need to be analyzed": {
+    "interface_y": 50,
+    "sediment_y": 610,
+    "conf": 0.25,
+    "delay_ms": 1,
+    "save_fps": null,
+    "start_paused": true,
+    "roi_safety": 0
+  },
+  "F:\\Analyzed_Regime_II\\Need to be discussed with Rishikesh- 073020-Blue-Nozzle-with-Coarse-Glass-Beads- Regime II- with black dye\\Need to be an": {
+    "interface_y": 0,
+    "sediment_y": 616,
+    "conf": 0.25,
+    "delay_ms": 1,
+    "save_fps": null,
+    "start_paused": true,
+    "roi_safety": 0
+  },
+  "F:\\Analyzed_Regime_II\\Need to be disscussed with Rishikesh- 073120-Blue-Nozzle-with-fine-Glass-Beads- Regime II\\Need to be analyzed": {
+    "interface_y": 0,
+    "sediment_y": 646,
+    "conf": 0.25,
+    "delay_ms": 1,
+    "save_fps": null,
+    "start_paused": true,
+    "roi_safety": 0
+  },
+  "F:\\102520 (2)- Regime I": {
+    "interface_y": 396,
+    "sediment_y": 468,
+    "conf": 0.25,
+    "delay_ms": 1,
+    "save_fps": null,
+    "start_paused": true,
+    "roi_safety": 0
   }
 }

@@ -17,7 +17,7 @@ from typing import Dict, Any, Optional
 parser = argparse.ArgumentParser(description="Run YOLO segmentation on videos with ROI, trigger, and presets.")
 parser.add_argument("--show_video", action="store_true", help="Render live windows (slower).")
 parser.add_argument("--save_video", action="store_true", help="Write annotated video to disk.")
-parser.add_argument("--model", type=str, default="runs/segment/train3/weights/best.pt", help="Path to YOLO model.")
+parser.add_argument("--model", type=str, default="run6.pt", help="Path to YOLO model.")
 parser.add_argument("--device", type=str, default=None, help="cuda:0 or cpu (auto if None).")
 parser.add_argument("--imgsz", type=int, default=640, help="Inference image size.")
 parser.add_argument("--conf", type=float, default=0.25, help="Confidence threshold.")
@@ -245,7 +245,13 @@ for vpath in video_paths:
     ensure_dir(csv_path)
     csv_f = open(csv_path, "w", newline="")
     writer = csv.writer(csv_f)
-    writer.writerow(["frame","time_s","triggered","depth_px","width_px","area_px2","roi_top_y","roi_bottom_y","cavity_conf"]) 
+    writer.writerow([
+        "frame","time_s","triggered",
+        "depth_px","width_px","area_px2",
+        "roi_top_y","roi_bottom_y","cavity_conf",
+        "sed_count","sed_area_px2","cluster_area_px2"
+    ])
+
 
     # Histories (bounded for UI only)
     depth_hist: deque[float] = deque(maxlen=HISTORY_KEEP)
@@ -313,6 +319,10 @@ for vpath in video_paths:
         draw_text(disp, f"Triggered: {is_triggered}", (10, 40), color=(0,255,0) if is_triggered else (0,0,255))
 
         depth_px = 0.0; width_px = 0.0; area_px2 = 0.0; cav_conf = 0.0
+        sed_count = 0               # number of sediment instances intersecting ROI
+        sed_area_px2 = 0.0          # total area (union) of sediment mask in ROI
+        cluster_area_px2 = 0.0      # total area (union) of cluster mask in ROI
+
 
         if is_triggered:
             # ── Inference ───────────────────────────────────────────────────
@@ -345,10 +355,16 @@ for vpath in video_paths:
                             best = {"mask": mask_lrg, "area": area, "bbox": (x,y,w,h), "conf": float(confs[m_i])}
 
                     elif cls == CLUSTER:  # cluster instances → union in ROI
-                        clus_roi = cv2.bitwise_or(clus_roi, apply_roi(m_res, roi_top_abs, roi_bottom_abs))
+                        clus_mask_roi = apply_roi(m_res, roi_top_abs, roi_bottom_abs)
+                        if clus_mask_roi.any():
+                            clus_roi = cv2.bitwise_or(clus_roi, clus_mask_roi.astype(np.uint8))
 
-                    elif cls == SEDIMENT:  # sediment instances → union in ROI
-                        sed_roi = cv2.bitwise_or(sed_roi, apply_roi(m_res, roi_top_abs, roi_bottom_abs))
+                    elif cls == SEDIMENT:  # sediment instances → count + union in ROI
+                        sed_mask_roi = apply_roi(m_res, roi_top_abs, roi_bottom_abs)
+                        if sed_mask_roi.any():
+                            sed_count += 1
+                            sed_roi = cv2.bitwise_or(sed_roi, sed_mask_roi.astype(np.uint8))
+
 
 
             # Metrics from best cavity instance
@@ -357,6 +373,18 @@ for vpath in video_paths:
             width_px = float(w)
             depth_px = float(h)
             cav_conf = float(best["conf"]) if best["area"] else 0.0
+
+                        # Compute total (union) areas for sediment and cluster ROI masks
+            if sed_roi.any():
+                # sed_roi is 0/1; count non-zero pixels for area in px^2
+                sed_area_px2 = float(int(np.count_nonzero(sed_roi)))
+            else:
+                sed_area_px2 = 0.0
+
+            if clus_roi.any():
+                cluster_area_px2 = float(int(np.count_nonzero(clus_roi)))
+            else:
+                cluster_area_px2 = 0.0
 
             # Overlays (pink for cavity, blue for sediment)
             if area_px2 > 0:
@@ -378,6 +406,12 @@ for vpath in video_paths:
                 disp = cv2.addWeighted(disp, 1.0, clus_vis_bgr, 0.25, 0)
                 # tiny legend (non-intrusive)
                 draw_text(disp, "Cluster overlay", (10, 80), color=(0,165,255))
+                draw_text(disp, f"Sed: {sed_count} inst | A={int(sed_area_px2)} px^2 | Clus A={int(cluster_area_px2)} px^2",
+                        (10, 100), color=(255,255,255))
+
+
+
+
 
 
         # Update histories (UI only)
@@ -395,7 +429,21 @@ for vpath in video_paths:
         composite = combine_side_by_side(disp, panel)
 
         # CSV row
-        writer.writerow([frame_idx-1, f"{ts:.6f}", int(is_triggered), f"{depth_px:.3f}", f"{width_px:.3f}", f"{area_px2:.3f}", roi_top_abs, roi_bottom_abs, f"{cav_conf:.3f}"])
+        writer.writerow([
+            frame_idx-1,
+            f"{ts:.6f}",
+            int(is_triggered),
+            f"{depth_px:.3f}",
+            f"{width_px:.3f}",
+            f"{area_px2:.3f}",
+            roi_top_abs,
+            roi_bottom_abs,
+            f"{cav_conf:.3f}",
+            int(sed_count),
+            f"{sed_area_px2:.3f}",
+            f"{cluster_area_px2:.3f}"
+        ])
+
 
         # I/O & controls
         if SHOW_VIDEO:
